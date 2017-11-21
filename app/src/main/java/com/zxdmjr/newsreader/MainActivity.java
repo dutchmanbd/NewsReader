@@ -2,6 +2,7 @@ package com.zxdmjr.newsreader;
 
 
 import android.app.AlertDialog;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -25,6 +26,10 @@ public class MainActivity extends AppCompatActivity {
 
     @BindView(R.id.rv_list_sources)
     RecyclerView rvSources;
+
+    @BindView(R.id.swipeRefreshLayout)
+    SwipeRefreshLayout srfSources;
+
 
     private NewsService newsService;
     private SourceAdapter adapter;
@@ -51,8 +56,17 @@ public class MainActivity extends AppCompatActivity {
 
         dialog = new SpotsDialog(this);
 
+        srfSources.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                loadWebsiteSource(true);
+            }
+        });
+
         loadWebsiteSource(false);
     }
+
+
 
     private void loadWebsiteSource(boolean isRefreshed) {
 
@@ -64,10 +78,11 @@ public class MainActivity extends AppCompatActivity {
 
                 WebSite webSite = new Gson().fromJson(cache, WebSite.class);
 
-                adapter = new SourceAdapter(getBaseContext(), webSite);
-                adapter.notifyDataSetChanged();
-
-                rvSources.setAdapter(adapter);
+//                adapter = new SourceAdapter(getBaseContext(), webSite);
+//                adapter.notifyDataSetChanged();
+//
+//                rvSources.setAdapter(adapter);
+                setAdapter(webSite);
 
             } else{
 
@@ -81,9 +96,10 @@ public class MainActivity extends AppCompatActivity {
 
                         if(response.body() != null){
 
-                            adapter = new SourceAdapter(getBaseContext(), response.body());
-                            adapter.notifyDataSetChanged();
-                            rvSources.setAdapter(adapter);
+//                            adapter = new SourceAdapter(getBaseContext(), response.body());
+//                            adapter.notifyDataSetChanged();
+//                            rvSources.setAdapter(adapter);
+                            setAdapter(response.body());
 
                             Paper.book().write("cache", new Gson().toJson(response.body()));
                         }
@@ -97,8 +113,40 @@ public class MainActivity extends AppCompatActivity {
 
             }
 
+        }  else{
+            //swipe to refresh
+
+            newsService.getSources().enqueue(new Callback<WebSite>() {
+                @Override
+                public void onResponse(Call<WebSite> call, Response<WebSite> response) {
+
+                    dialog.dismiss();
+
+                    if(response.body() != null){
+
+                        setAdapter(response.body());
+
+                        Paper.book().write("cache", new Gson().toJson(response.body()));
+                    }
+                    srfSources.setRefreshing(false);
+                }
+
+                @Override
+                public void onFailure(Call<WebSite> call, Throwable t) {
+
+                }
+            });
+
+
         }
 
 
+    }
+
+    private void setAdapter(WebSite webSite){
+
+        adapter = new SourceAdapter(this, webSite);
+        adapter.notifyDataSetChanged();
+        rvSources.setAdapter(adapter);
     }
 }

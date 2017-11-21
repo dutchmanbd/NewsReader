@@ -12,6 +12,6 @@ import retrofit2.http.Url;
 
 public interface IconBetterIdeaService {
 
-    @GET("")
+    @GET
     Call<IconBetterIdea> getIconUrl(@Url String url);
 }
